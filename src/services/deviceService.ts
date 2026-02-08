@@ -57,6 +57,7 @@ export const deviceService = {
         pairedParentId: data.pairedParentId || parentId,
         registeredAt: data.registeredAt?.toDate() || new Date(),
         lastSeenAt: data.lastSeenAt?.toDate(),
+        deviceLocked: data.deviceLocked || false,
       });
     });
   },
@@ -74,7 +75,7 @@ export const deviceService = {
         return {
           packageName: doc.id,
           appName: data.appName,
-          isBlocked: data.isBlocked || false,
+          blocked: data.blocked || false,
           dailyLimitMinutes: data.dailyLimitMinutes || 0,
         };
       });

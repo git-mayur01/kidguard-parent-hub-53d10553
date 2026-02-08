@@ -11,7 +11,7 @@ import { AppListItem } from '@/components/AppListItem';
 import { useAuth } from '@/contexts/AuthContext';
 import { deviceService } from '@/services/deviceService';
 import { policyService } from '@/services/policyService';
-import { Device, InstalledApp, DevicePolicy } from '@/types';
+import { Device, InstalledApp } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -19,7 +19,6 @@ export const DeviceDetail: React.FC = () => {
   const { deviceId } = useParams<{ deviceId: string }>();
   const [device, setDevice] = useState<Device | null>(null);
   const [apps, setApps] = useState<InstalledApp[]>([]);
-  const [policy, setPolicy] = useState<DevicePolicy | null>(null);
   const [loading, setLoading] = useState(true);
   const [lockUpdating, setLockUpdating] = useState(false);
   const { user } = useAuth();
@@ -34,21 +33,19 @@ export const DeviceDetail: React.FC = () => {
     });
 
     const unsubApps = deviceService.subscribeToInstalledApps(user.uid, deviceId, setApps);
-    const unsubPolicy = deviceService.subscribeToPolicy(deviceId, setPolicy);
 
     return () => {
       unsubDevice();
       unsubApps();
-      unsubPolicy();
     };
   }, [deviceId, user]);
 
   const handleLockToggle = async (locked: boolean) => {
-    if (!deviceId) return;
+    if (!deviceId || !user) return;
     
     setLockUpdating(true);
     try {
-      await policyService.toggleDeviceLock(deviceId, locked);
+      await policyService.toggleDeviceLock(user.uid, deviceId, locked);
       toast.success(`Device ${locked ? 'locked' : 'unlocked'}`);
     } catch (error) {
       toast.error('Failed to update device lock status');
@@ -84,7 +81,7 @@ export const DeviceDetail: React.FC = () => {
     );
   }
 
-  const isLocked = policy?.deviceLocked ?? false;
+  const isLocked = device?.deviceLocked ?? false;
 
   return (
     <div className="min-h-screen bg-background">
