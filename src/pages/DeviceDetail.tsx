@@ -28,12 +28,7 @@ export const DeviceDetail: React.FC = () => {
   useEffect(() => {
     if (!deviceId || !user) return;
 
-    const unsubDevice = deviceService.subscribeToDevice(deviceId, (device) => {
-      if (device && device.pairedParentId !== user.uid) {
-        toast.error('You do not have access to this device');
-        navigate('/');
-        return;
-      }
+    const unsubDevice = deviceService.subscribeToDevice(user.uid, deviceId, (device) => {
       setDevice(device);
       setLoading(false);
     });
@@ -46,7 +41,7 @@ export const DeviceDetail: React.FC = () => {
       unsubApps();
       unsubPolicy();
     };
-  }, [deviceId, user, navigate]);
+  }, [deviceId, user]);
 
   const handleLockToggle = async (locked: boolean) => {
     if (!deviceId) return;
