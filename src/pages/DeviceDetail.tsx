@@ -29,7 +29,7 @@ export const DeviceDetail: React.FC = () => {
     if (!deviceId || !user) return;
 
     const unsubDevice = deviceService.subscribeToDevice(deviceId, (device) => {
-      if (device && device.parentId !== user.uid) {
+      if (device && device.pairedParentId !== user.uid) {
         toast.error('You do not have access to this device');
         navigate('/');
         return;
@@ -115,7 +115,9 @@ export const DeviceDetail: React.FC = () => {
                 <div>
                   <CardTitle>{device.deviceName}</CardTitle>
                   <CardDescription>
-                    Last seen {formatDistanceToNow(device.lastSeenAt, { addSuffix: true })}
+                    {device.lastSeenAt 
+                      ? `Last seen ${formatDistanceToNow(device.lastSeenAt, { addSuffix: true })}`
+                      : `Registered ${formatDistanceToNow(device.registeredAt, { addSuffix: true })}`}
                   </CardDescription>
                 </div>
               </div>

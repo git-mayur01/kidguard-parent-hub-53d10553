@@ -34,7 +34,9 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device }) => {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Clock className="h-3 w-3" />
               <span>
-                Last seen {formatDistanceToNow(device.lastSeenAt, { addSuffix: true })}
+                {device.lastSeenAt 
+                  ? `Last seen ${formatDistanceToNow(device.lastSeenAt, { addSuffix: true })}`
+                  : `Registered ${formatDistanceToNow(device.registeredAt, { addSuffix: true })}`}
               </span>
             </div>
           </div>
