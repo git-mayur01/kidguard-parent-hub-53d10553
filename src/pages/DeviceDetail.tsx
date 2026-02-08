@@ -124,6 +124,11 @@ export const DeviceDetail: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Platform</span>
+                <span className="text-sm font-medium capitalize">{device.platform}</span>
+              </div>
+
+              <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Status</span>
                 <Badge
                   variant={
