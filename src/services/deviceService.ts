@@ -74,11 +74,14 @@ export const deviceService = {
         const data = doc.data();
         return {
           packageName: doc.id,
-          appName: data.appName,
+          appName: data.appName || doc.id,
           blocked: data.blocked || false,
           dailyLimitMinutes: data.dailyLimitMinutes || 0,
+          lastSeenAt: data.lastSeenAt?.toDate(),
         };
       });
+      // Sort by appName for consistent display
+      apps.sort((a, b) => a.appName.localeCompare(b.appName));
       callback(apps);
     });
   },

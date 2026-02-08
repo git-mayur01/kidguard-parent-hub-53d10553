@@ -16,6 +16,7 @@ export interface InstalledApp {
   appName: string;
   blocked: boolean;
   dailyLimitMinutes: number;
+  lastSeenAt?: Date;
 }
 
 export interface DevicePolicy {
