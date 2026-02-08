@@ -37,10 +37,11 @@ export const deviceService = {
   },
 
   subscribeToDevice(
+    parentId: string,
     deviceId: string,
     callback: (device: Device | null) => void
   ): () => void {
-    const deviceRef = doc(db, 'devices', deviceId);
+    const deviceRef = doc(db, 'parents', parentId, 'devices', deviceId);
 
     return onSnapshot(deviceRef, (snapshot) => {
       if (!snapshot.exists()) {
@@ -53,7 +54,7 @@ export const deviceService = {
         deviceName: data.deviceName || 'Unknown Device',
         status: data.status || 'PENDING',
         platform: data.platform || 'android',
-        pairedParentId: data.pairedParentId,
+        pairedParentId: data.pairedParentId || parentId,
         registeredAt: data.registeredAt?.toDate() || new Date(),
         lastSeenAt: data.lastSeenAt?.toDate(),
       });
