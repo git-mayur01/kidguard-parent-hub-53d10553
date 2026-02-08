@@ -18,14 +18,15 @@ export const policyService = {
   },
 
   async toggleAppBlock(
+    parentId: string,
     deviceId: string,
     packageName: string,
     isBlocked: boolean
   ): Promise<void> {
-    const appRef = doc(db, 'devices', deviceId, 'installedApps', packageName);
+    const appRef = doc(db, 'parents', parentId, 'devices', deviceId, 'installedApps', packageName);
     await updateDoc(appRef, { isBlocked });
 
-    // Also update the policy document
+    // Also update the policy document for Android agent
     const policyRef = doc(db, 'devices', deviceId, 'policy', 'current');
     const policySnap = await getDoc(policyRef);
 
@@ -50,14 +51,15 @@ export const policyService = {
   },
 
   async setAppDailyLimit(
+    parentId: string,
     deviceId: string,
     packageName: string,
     limitMinutes: number
   ): Promise<void> {
-    const appRef = doc(db, 'devices', deviceId, 'installedApps', packageName);
+    const appRef = doc(db, 'parents', parentId, 'devices', deviceId, 'installedApps', packageName);
     await updateDoc(appRef, { dailyLimitMinutes: limitMinutes });
 
-    // Also update the policy document
+    // Also update the policy document for Android agent
     const policyRef = doc(db, 'devices', deviceId, 'policy', 'current');
     const policySnap = await getDoc(policyRef);
 

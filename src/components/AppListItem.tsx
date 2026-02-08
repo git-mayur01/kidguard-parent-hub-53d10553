@@ -10,15 +10,16 @@ import { toast } from 'sonner';
 interface AppListItemProps {
   app: InstalledApp;
   deviceId: string;
+  parentId: string;
 }
 
-export const AppListItem: React.FC<AppListItemProps> = ({ app, deviceId }) => {
+export const AppListItem: React.FC<AppListItemProps> = ({ app, deviceId, parentId }) => {
   const [limitMinutes, setLimitMinutes] = useState(app.dailyLimitMinutes.toString());
   const [isUpdating, setIsUpdating] = useState(false);
 
   const handleBlockToggle = async (blocked: boolean) => {
     try {
-      await policyService.toggleAppBlock(deviceId, app.packageName, blocked);
+      await policyService.toggleAppBlock(parentId, deviceId, app.packageName, blocked);
       toast.success(`${app.appName} ${blocked ? 'blocked' : 'unblocked'}`);
     } catch (error) {
       toast.error('Failed to update app block status');
@@ -34,7 +35,7 @@ export const AppListItem: React.FC<AppListItemProps> = ({ app, deviceId }) => {
 
     setIsUpdating(true);
     try {
-      await policyService.setAppDailyLimit(deviceId, app.packageName, minutes);
+      await policyService.setAppDailyLimit(parentId, deviceId, app.packageName, minutes);
       toast.success(`Daily limit set to ${minutes} minutes`);
     } catch (error) {
       toast.error('Failed to update daily limit');

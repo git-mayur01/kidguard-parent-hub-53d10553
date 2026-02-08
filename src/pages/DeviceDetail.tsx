@@ -38,7 +38,7 @@ export const DeviceDetail: React.FC = () => {
       setLoading(false);
     });
 
-    const unsubApps = deviceService.subscribeToInstalledApps(deviceId, setApps);
+    const unsubApps = deviceService.subscribeToInstalledApps(user.uid, deviceId, setApps);
     const unsubPolicy = deviceService.subscribeToPolicy(deviceId, setPolicy);
 
     return () => {
@@ -183,6 +183,7 @@ export const DeviceDetail: React.FC = () => {
                       key={app.packageName}
                       app={app}
                       deviceId={deviceId!}
+                      parentId={user!.uid}
                     />
                   ))}
                 </div>
