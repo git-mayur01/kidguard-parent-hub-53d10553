@@ -8,12 +8,13 @@ export interface Device {
   pairedParentId?: string;
   registeredAt: Date;
   lastSeenAt?: Date;
+  deviceLocked?: boolean;
 }
 
 export interface InstalledApp {
   packageName: string;
   appName: string;
-  isBlocked: boolean;
+  blocked: boolean;
   dailyLimitMinutes: number;
 }
 

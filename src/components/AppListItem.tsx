@@ -16,13 +16,17 @@ interface AppListItemProps {
 export const AppListItem: React.FC<AppListItemProps> = ({ app, deviceId, parentId }) => {
   const [limitMinutes, setLimitMinutes] = useState(app.dailyLimitMinutes.toString());
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isBlockUpdating, setIsBlockUpdating] = useState(false);
 
   const handleBlockToggle = async (blocked: boolean) => {
+    setIsBlockUpdating(true);
     try {
       await policyService.toggleAppBlock(parentId, deviceId, app.packageName, blocked);
       toast.success(`${app.appName} ${blocked ? 'blocked' : 'unblocked'}`);
     } catch (error) {
       toast.error('Failed to update app block status');
+    } finally {
+      setIsBlockUpdating(false);
     }
   };
 
@@ -39,6 +43,7 @@ export const AppListItem: React.FC<AppListItemProps> = ({ app, deviceId, parentI
       toast.success(`Daily limit set to ${minutes} minutes`);
     } catch (error) {
       toast.error('Failed to update daily limit');
+      setLimitMinutes(app.dailyLimitMinutes.toString());
     } finally {
       setIsUpdating(false);
     }
@@ -81,8 +86,9 @@ export const AppListItem: React.FC<AppListItemProps> = ({ app, deviceId, parentI
         <div className="flex items-center gap-2">
           <Ban className="h-4 w-4 text-muted-foreground" />
           <Switch
-            checked={app.isBlocked}
+            checked={app.blocked}
             onCheckedChange={handleBlockToggle}
+            disabled={isBlockUpdating}
           />
         </div>
       </div>
