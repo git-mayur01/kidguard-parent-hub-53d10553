@@ -61,10 +61,11 @@ export const deviceService = {
   },
 
   subscribeToInstalledApps(
+    parentId: string,
     deviceId: string,
     callback: (apps: InstalledApp[]) => void
   ): () => void {
-    const appsRef = collection(db, 'devices', deviceId, 'installedApps');
+    const appsRef = collection(db, 'parents', parentId, 'devices', deviceId, 'installedApps');
 
     return onSnapshot(appsRef, (snapshot) => {
       const apps: InstalledApp[] = snapshot.docs.map((doc) => {
