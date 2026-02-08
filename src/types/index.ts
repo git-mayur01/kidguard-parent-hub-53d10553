@@ -2,12 +2,12 @@ export type DeviceStatus = 'PENDING' | 'ACTIVE' | 'LOCKED';
 
 export interface Device {
   id: string;
-  parentId: string;
-  status: DeviceStatus;
-  pairingCode: string;
   deviceName: string;
-  createdAt: Date;
-  lastSeenAt: Date;
+  status: DeviceStatus;
+  platform: string;
+  pairedParentId?: string;
+  registeredAt: Date;
+  lastSeenAt?: Date;
 }
 
 export interface InstalledApp {

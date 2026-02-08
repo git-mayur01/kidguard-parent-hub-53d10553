@@ -6,30 +6,30 @@ import {
   doc,
   updateDoc,
   getDocs,
-  Timestamp,
+  setDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Device, InstalledApp, DevicePolicy } from '@/types';
 
 export const deviceService = {
+  // Subscribe to devices from parents/{parentId}/devices subcollection
   subscribeToDevices(
     parentId: string,
     callback: (devices: Device[]) => void
   ): () => void {
-    const devicesRef = collection(db, 'devices');
-    const q = query(devicesRef, where('parentId', '==', parentId));
+    const devicesRef = collection(db, 'parents', parentId, 'devices');
 
-    return onSnapshot(q, (snapshot) => {
+    return onSnapshot(devicesRef, (snapshot) => {
       const devices: Device[] = snapshot.docs.map((doc) => {
         const data = doc.data();
         return {
           id: doc.id,
-          parentId: data.parentId,
-          status: data.status,
-          pairingCode: data.pairingCode || '',
-          deviceName: data.deviceName,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          lastSeenAt: data.lastSeenAt?.toDate() || new Date(),
+          deviceName: data.deviceName || 'Unknown Device',
+          status: data.status || 'PENDING',
+          platform: data.platform || 'android',
+          pairedParentId: data.pairedParentId,
+          registeredAt: data.registeredAt?.toDate() || new Date(),
+          lastSeenAt: data.lastSeenAt?.toDate(),
         };
       });
       callback(devices);
@@ -50,12 +50,12 @@ export const deviceService = {
       const data = snapshot.data();
       callback({
         id: snapshot.id,
-        parentId: data.parentId,
-        status: data.status,
-        pairingCode: data.pairingCode || '',
-        deviceName: data.deviceName,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        lastSeenAt: data.lastSeenAt?.toDate() || new Date(),
+        deviceName: data.deviceName || 'Unknown Device',
+        status: data.status || 'PENDING',
+        platform: data.platform || 'android',
+        pairedParentId: data.pairedParentId,
+        registeredAt: data.registeredAt?.toDate() || new Date(),
+        lastSeenAt: data.lastSeenAt?.toDate(),
       });
     });
   },
@@ -101,6 +101,7 @@ export const deviceService = {
   },
 
   async pairDevice(pairingCode: string, parentId: string): Promise<string | null> {
+    // Query devices collection for matching pairing code
     const devicesRef = collection(db, 'devices');
     const q = query(devicesRef, where('pairingCode', '==', pairingCode));
     const snapshot = await getDocs(q);
@@ -110,12 +111,26 @@ export const deviceService = {
     }
 
     const deviceDoc = snapshot.docs[0];
-    await updateDoc(doc(db, 'devices', deviceDoc.id), {
-      parentId,
+    const deviceData = deviceDoc.data();
+    const deviceId = deviceDoc.id;
+
+    // 1. Create document in parents/{parentId}/devices/{deviceId}
+    await setDoc(doc(db, 'parents', parentId, 'devices', deviceId), {
+      deviceId: deviceId,
+      deviceName: deviceData.deviceName || 'Unknown Device',
+      platform: deviceData.platform || 'android',
       status: 'ACTIVE',
-      pairingCode: '',
+      pairedParentId: parentId,
+      registeredAt: deviceData.registeredAt || new Date(),
     });
 
-    return deviceDoc.id;
+    // 2. Update the main device document
+    await updateDoc(doc(db, 'devices', deviceId), {
+      status: 'ACTIVE',
+      pairedParentId: parentId,
+      pairingCode: null,
+    });
+
+    return deviceId;
   },
 };
