@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Link2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Link2, Loader2, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 export const PairDevice: React.FC = () => {
   const [pairingCode, setPairingCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -31,13 +32,14 @@ export const PairDevice: React.FC = () => {
 
     setLoading(true);
     try {
-      const deviceId = await deviceService.pairDevice(pairingCode.trim(), user.uid);
+      const result = await deviceService.pairDevice(pairingCode.trim(), user.uid);
       
-      if (deviceId) {
-        toast.success('Device paired successfully!');
-        navigate(`/device/${deviceId}`);
+      if ('error' in result) {
+        toast.error(result.error);
       } else {
-        toast.error('Invalid pairing code. Please check and try again.');
+        setSuccess(true);
+        toast.success('Device paired successfully!');
+        setTimeout(() => navigate(`/device/${result.deviceId}`), 1500);
       }
     } catch (error) {
       toast.error('Failed to pair device. Please try again.');
@@ -63,42 +65,51 @@ export const PairDevice: React.FC = () => {
           <Card>
             <CardHeader className="text-center">
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                <Link2 className="h-8 w-8 text-primary" />
+                {success ? (
+                  <CheckCircle className="h-8 w-8 text-primary" />
+                ) : (
+                  <Link2 className="h-8 w-8 text-primary" />
+                )}
               </div>
-              <CardTitle>Pair a Device</CardTitle>
+              <CardTitle>{success ? 'Device Paired!' : 'Pair a Device'}</CardTitle>
               <CardDescription>
-                Enter the pairing code shown on your child's device
+                {success
+                  ? 'Redirecting to device details...'
+                  : 'Enter the pairing code shown on your child\'s device'}
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handlePair} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="pairing-code">Pairing Code</Label>
-                  <Input
-                    id="pairing-code"
-                    type="text"
-                    placeholder="Enter 6-digit code"
-                    value={pairingCode}
-                    onChange={(e) => setPairingCode(e.target.value.toUpperCase())}
-                    className="text-center text-2xl tracking-widest"
-                    maxLength={10}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Pair Device
-                </Button>
-              </form>
+            {!success && (
+              <CardContent>
+                <form onSubmit={handlePair} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="pairing-code">Pairing Code</Label>
+                    <Input
+                      id="pairing-code"
+                      type="text"
+                      placeholder="Enter 6-digit code"
+                      value={pairingCode}
+                      onChange={(e) => setPairingCode(e.target.value.toUpperCase())}
+                      className="text-center text-2xl tracking-widest"
+                      maxLength={10}
+                      disabled={loading}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {loading ? 'Pairing...' : 'Pair Device'}
+                  </Button>
+                </form>
 
-              <div className="mt-6 rounded-lg bg-muted p-4">
-                <h4 className="mb-2 font-medium">How to get the pairing code:</h4>
-                <ol className="list-inside list-decimal space-y-1 text-sm text-muted-foreground">
-                  <li>Open KidGuard on your child's Android device</li>
-                  <li>Tap "Get Pairing Code"</li>
-                  <li>Enter the code shown above</li>
-                </ol>
-              </div>
-            </CardContent>
+                <div className="mt-6 rounded-lg bg-muted p-4">
+                  <h4 className="mb-2 font-medium">How to get the pairing code:</h4>
+                  <ol className="list-inside list-decimal space-y-1 text-sm text-muted-foreground">
+                    <li>Open KidGuard on your child's Android device</li>
+                    <li>Tap "Get Pairing Code"</li>
+                    <li>Enter the code shown above</li>
+                  </ol>
+                </div>
+              </CardContent>
+            )}
           </Card>
         </div>
       </main>
