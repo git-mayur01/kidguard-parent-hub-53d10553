@@ -1,11 +1,8 @@
 import {
   collection,
-  query,
-  where,
   onSnapshot,
   doc,
   updateDoc,
-  getDocs,
   setDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -106,37 +103,39 @@ export const deviceService = {
     });
   },
 
-  async pairDevice(pairingCode: string, parentId: string): Promise<string | null> {
-    // Query devices collection for matching pairing code
-    const devicesRef = collection(db, 'devices');
-    const q = query(devicesRef, where('pairingCode', '==', pairingCode));
-    const snapshot = await getDocs(q);
+  async pairDevice(pairingCode: string, parentId: string): Promise<{ deviceId: string } | { error: string }> {
+    const { getDoc, serverTimestamp } = await import('firebase/firestore');
+    
+    const codeRef = doc(db, 'pairingCodes', pairingCode);
+    const codeSnap = await getDoc(codeRef);
 
-    if (snapshot.empty) {
-      return null;
+    if (!codeSnap.exists()) {
+      return { error: 'Invalid pairing code' };
     }
 
-    const deviceDoc = snapshot.docs[0];
-    const deviceData = deviceDoc.data();
-    const deviceId = deviceDoc.id;
+    const codeData = codeSnap.data();
 
-    // 1. Create document in parents/{parentId}/devices/{deviceId}
+    if (codeData.claimed === true) {
+      return { error: 'Code already used' };
+    }
+
+    const deviceId = codeData.deviceId;
+    if (!deviceId) {
+      return { error: 'Invalid pairing code' };
+    }
+
+    // Create parent's device document
     await setDoc(doc(db, 'parents', parentId, 'devices', deviceId), {
-      deviceId: deviceId,
-      deviceName: deviceData.deviceName || 'Unknown Device',
-      platform: deviceData.platform || 'android',
+      platform: 'android',
       status: 'ACTIVE',
-      pairedParentId: parentId,
-      registeredAt: deviceData.registeredAt || new Date(),
+      pairedAt: serverTimestamp(),
     });
 
-    // 2. Update the main device document
-    await updateDoc(doc(db, 'devices', deviceId), {
-      status: 'ACTIVE',
-      pairedParentId: parentId,
-      pairingCode: null,
+    // Mark code as claimed
+    await updateDoc(codeRef, {
+      claimed: true,
     });
 
-    return deviceId;
+    return { deviceId };
   },
 };
