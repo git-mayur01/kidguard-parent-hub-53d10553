@@ -58,6 +58,16 @@ export const DeviceDetail: React.FC = () => {
     return () => unsubApps();
   }, [deviceId, user]);
 
+  const filteredApps = apps.filter((app) => {
+    const pkg = app.packageName || app.id || '';
+    const name = app.appName || '';
+    return (
+      app.platform === 'android' &&
+      !pkg.startsWith('com.android.') &&
+      !pkg.startsWith('android') &&
+      name.trim() !== ''
+    );
+  });
   const handleLockToggle = async (locked: boolean) => {
     if (!deviceId || !user) return;
     
@@ -210,15 +220,15 @@ export const DeviceDetail: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {apps.length === 0 ? (
+              {filteredApps.length === 0 ? (
                 <div className="py-8 text-center text-muted-foreground">
                   No apps found. Apps will appear here once the device syncs.
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {apps.map((app) => (
+                  {filteredApps.map((app) => (
                     <AppListItem
-                      key={app.packageName}
+                      key={app.packageName || app.id}
                       app={app}
                       deviceId={deviceId!}
                       parentId={user!.uid}
