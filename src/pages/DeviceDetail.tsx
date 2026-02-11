@@ -105,6 +105,15 @@ export const DeviceDetail: React.FC = () => {
             <p><span className="font-semibold">User UID:</span> {user?.uid ?? 'N/A'}</p>
             <p><span className="font-semibold">Device ID:</span> {deviceId ?? 'N/A'}</p>
             <p><span className="font-semibold">Firestore Path:</span> parents/{user?.uid}/devices/{deviceId}/installedApps</p>
+            <p><span className="font-semibold">Apps count:</span> {apps.length}</p>
+            {apps.length > 0 && (
+              <div className="mt-2 border-t pt-2">
+                <p className="font-semibold mb-1">Raw app docs:</p>
+                {apps.map((app) => (
+                  <p key={app.packageName}>• {app.packageName} → {app.appName} (blocked: {String(app.blocked)}, limit: {app.dailyLimitMinutes})</p>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
