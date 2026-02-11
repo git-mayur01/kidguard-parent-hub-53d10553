@@ -67,18 +67,19 @@ export const deviceService = {
     const appsRef = collection(db, 'parents', parentId, 'devices', deviceId, 'installedApps');
 
     return onSnapshot(appsRef, (snapshot) => {
-      const apps: InstalledApp[] = snapshot.docs.map((doc) => {
-        const data = doc.data();
+      console.log('[DEBUG] installedApps snapshot.size:', snapshot.size);
+      console.log('[DEBUG] installedApps path:', appsRef.path);
+      const apps: InstalledApp[] = snapshot.docs.map((d) => {
+        const data = d.data();
+        console.log('[DEBUG] app doc id:', d.id, 'data:', JSON.stringify(data));
         return {
-          packageName: doc.id,
-          appName: data.appName || doc.id,
+          packageName: d.id,
+          appName: data.appName || d.id,
           blocked: data.blocked || false,
           dailyLimitMinutes: data.dailyLimitMinutes || 0,
           lastSeenAt: data.lastSeenAt?.toDate(),
         };
       });
-      // Sort by appName for consistent display
-      apps.sort((a, b) => a.appName.localeCompare(b.appName));
       callback(apps);
     });
   },
