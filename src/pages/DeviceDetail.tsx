@@ -96,6 +96,18 @@ export const DeviceDetail: React.FC = () => {
           Back to Dashboard
         </Button>
 
+        {/* Debug Card */}
+        <Card className="mb-6 border-dashed border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-mono">🐛 Debug Info</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1 font-mono text-xs">
+            <p><span className="font-semibold">User UID:</span> {user?.uid ?? 'N/A'}</p>
+            <p><span className="font-semibold">Device ID:</span> {deviceId ?? 'N/A'}</p>
+            <p><span className="font-semibold">Firestore Path:</span> parents/{user?.uid}/devices/{deviceId}/installedApps</p>
+          </CardContent>
+        </Card>
+
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Device Info Card */}
           <Card className="lg:col-span-1">
