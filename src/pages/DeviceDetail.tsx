@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Lock, Unlock, Smartphone, Loader2 } from 'lucide-react';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +20,8 @@ import { toast } from 'sonner';
 export const DeviceDetail: React.FC = () => {
   const { deviceId } = useParams<{ deviceId: string }>();
   const [device, setDevice] = useState<Device | null>(null);
-  const [apps, setApps] = useState<InstalledApp[]>([]);
+  const [apps, setApps] = useState<any[]>([]);
+  const [snapshotSize, setSnapshotSize] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [lockUpdating, setLockUpdating] = useState(false);
   const { user } = useAuth();
@@ -32,12 +35,27 @@ export const DeviceDetail: React.FC = () => {
       setLoading(false);
     });
 
-    const unsubApps = deviceService.subscribeToInstalledApps(user.uid, deviceId, setApps);
+    return () => unsubDevice();
+  }, [deviceId, user]);
 
-    return () => {
-      unsubDevice();
-      unsubApps();
-    };
+  useEffect(() => {
+    if (!deviceId || !user) return;
+
+    const appsRef = collection(db, "parents", user.uid, "devices", deviceId, "installedApps");
+    const unsubApps = onSnapshot(appsRef, (snapshot) => {
+      console.log("[DIRECT] snapshot.size:", snapshot.size);
+      setSnapshotSize(snapshot.size);
+      const appsList = snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      }));
+      console.log("[DIRECT] appsList length:", appsList.length);
+      setApps(appsList);
+    }, (error) => {
+      console.error("[DIRECT] onSnapshot error:", error);
+    });
+
+    return () => unsubApps();
   }, [deviceId, user]);
 
   const handleLockToggle = async (locked: boolean) => {
@@ -105,13 +123,15 @@ export const DeviceDetail: React.FC = () => {
             <p><span className="font-semibold">User UID:</span> {user?.uid ?? 'N/A'}</p>
             <p><span className="font-semibold">Device ID:</span> {deviceId ?? 'N/A'}</p>
             <p><span className="font-semibold">Firestore Path:</span> parents/{user?.uid}/devices/{deviceId}/installedApps</p>
-            <p><span className="font-semibold">Apps count:</span> {apps.length}</p>
+            <p><span className="font-semibold">Snapshot Size:</span> {snapshotSize ?? 'N/A'}</p>
+            <p><span className="font-semibold">Apps count (state):</span> {apps.length}</p>
             {apps.length > 0 && (
               <div className="mt-2 border-t pt-2">
                 <p className="font-semibold mb-1">Raw app docs:</p>
-                {apps.map((app) => (
-                  <p key={app.packageName}>• {app.packageName} → {app.appName} (blocked: {String(app.blocked)}, limit: {app.dailyLimitMinutes})</p>
+                {apps.slice(0, 10).map((app) => (
+                  <p key={app.id}>• {app.id} → {app.appName ?? 'N/A'} (blocked: {String(app.blocked ?? false)}, limit: {app.dailyLimitMinutes ?? 0})</p>
                 ))}
+                {apps.length > 10 && <p>... and {apps.length - 10} more</p>}
               </div>
             )}
           </CardContent>
