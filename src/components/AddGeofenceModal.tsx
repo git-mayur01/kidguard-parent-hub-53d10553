@@ -65,6 +65,19 @@ export const AddGeofenceModal: React.FC<AddGeofenceModalProps> = ({
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       }).addTo(map);
 
+      // Auto-select initialCenter if available
+      if (initialCenter) {
+        const { latitude: lat, longitude: lng } = initialCenter;
+        setSelectedPos({ lat, lng });
+        markerRef.current = L.marker([lat, lng]).addTo(map);
+        circleRef.current = L.circle([lat, lng], {
+          radius,
+          color: 'hsl(221, 83%, 53%)',
+          fillOpacity: 0.15,
+          weight: 2,
+        }).addTo(map);
+      }
+
       map.on('click', (e: L.LeafletMouseEvent) => {
         const { lat, lng } = e.latlng;
         setSelectedPos({ lat, lng });
@@ -79,7 +92,7 @@ export const AddGeofenceModal: React.FC<AddGeofenceModalProps> = ({
           circleRef.current.setLatLng([lat, lng]);
         } else {
           circleRef.current = L.circle([lat, lng], {
-            radius: 200,
+            radius,
             color: 'hsl(221, 83%, 53%)',
             fillOpacity: 0.15,
             weight: 2,
