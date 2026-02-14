@@ -73,7 +73,7 @@ export const DeviceDetail: React.FC = () => {
   useEffect(() => {
     if (!deviceId || !user) return;
 
-    const geofencesRef = collection(db, "parents", user.uid, "devices", deviceId, "geoFences");
+    const geofencesRef = collection(db, "parents", user.uid, "devices", deviceId, "geofences");
     const unsubGeo = onSnapshot(geofencesRef, (snapshot) => {
       const fences = snapshot.docs.map(d => ({
         id: d.id,
@@ -112,14 +112,14 @@ export const DeviceDetail: React.FC = () => {
 
   const handleSaveGeofence = async (name: string, latitude: number, longitude: number, radius: number) => {
     if (!deviceId || !user) return;
-    const geofencesRef = collection(db, "parents", user.uid, "devices", deviceId, "geoFences");
+    const geofencesRef = collection(db, "parents", user.uid, "devices", deviceId, "geofences");
     await addDoc(geofencesRef, { name, latitude, longitude, radius, createdAt: serverTimestamp(), isActive: true });
     toast.success(`Geo-fence "${name}" created`);
   };
 
   const handleDeleteGeofence = async (fenceId: string) => {
     if (!deviceId || !user) return;
-    const fenceDoc = doc(db, "parents", user.uid, "devices", deviceId, "geoFences", fenceId);
+    const fenceDoc = doc(db, "parents", user.uid, "devices", deviceId, "geofences", fenceId);
     await deleteDoc(fenceDoc);
     toast.success('Geo-fence deleted');
   };
