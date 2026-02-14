@@ -111,10 +111,21 @@ export const DeviceDetail: React.FC = () => {
   };
 
   const handleSaveGeofence = async (name: string, latitude: number, longitude: number, radius: number) => {
-    if (!deviceId || !user) return;
-    const geofencesRef = collection(db, "parents", user.uid, "devices", deviceId, "geofences");
-    await addDoc(geofencesRef, { name, latitude, longitude, radius, createdAt: serverTimestamp(), isActive: true });
-    toast.success(`Geo-fence "${name}" created`);
+    if (!deviceId || !user) {
+      console.error('[GeoFence] Missing deviceId or user', { deviceId, user: user?.uid });
+      return;
+    }
+    const path = `parents/${user.uid}/devices/${deviceId}/geofences`;
+    console.log('[GeoFence] Saving fence:', { parentId: user.uid, deviceId, path, name, latitude, longitude, radius });
+    try {
+      const geofencesRef = collection(db, "parents", user.uid, "devices", deviceId, "geofences");
+      const docRef = await addDoc(geofencesRef, { name, latitude, longitude, radius, createdAt: serverTimestamp(), isActive: true });
+      console.log('[GeoFence] Successfully saved with ID:', docRef.id);
+      toast.success(`Geo-fence "${name}" created`);
+    } catch (error) {
+      console.error('[GeoFence] Error saving fence:', error);
+      toast.error('Failed to save geo-fence');
+    }
   };
 
   const handleDeleteGeofence = async (fenceId: string) => {
