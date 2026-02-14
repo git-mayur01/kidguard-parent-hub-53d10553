@@ -1,5 +1,4 @@
-import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
+import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { formatDistanceToNow } from 'date-fns';
@@ -25,15 +24,69 @@ interface LiveLocationMapProps {
   lastLocation: LastLocation | null;
 }
 
-const MapUpdater: React.FC<{ lat: number; lng: number }> = ({ lat, lng }) => {
-  const map = useMap();
-  useEffect(() => {
-    map.setView([lat, lng], map.getZoom());
-  }, [lat, lng, map]);
-  return null;
-};
-
 export const LiveLocationMap: React.FC<LiveLocationMapProps> = ({ lastLocation }) => {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
+  const circleRef = useRef<L.Circle | null>(null);
+
+  useEffect(() => {
+    if (!mapRef.current || !lastLocation) return;
+
+    if (!mapInstanceRef.current) {
+      mapInstanceRef.current = L.map(mapRef.current).setView(
+        [lastLocation.latitude, lastLocation.longitude],
+        16
+      );
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      }).addTo(mapInstanceRef.current);
+    }
+
+    const map = mapInstanceRef.current;
+    const pos: L.LatLngExpression = [lastLocation.latitude, lastLocation.longitude];
+
+    map.setView(pos, map.getZoom());
+
+    if (markerRef.current) {
+      markerRef.current.setLatLng(pos);
+      markerRef.current.setPopupContent(
+        `Last updated: ${formatDistanceToNow(new Date(lastLocation.timestamp), { addSuffix: true })}`
+      );
+    } else {
+      markerRef.current = L.marker(pos)
+        .addTo(map)
+        .bindPopup(
+          `Last updated: ${formatDistanceToNow(new Date(lastLocation.timestamp), { addSuffix: true })}`
+        );
+    }
+
+    if (circleRef.current) {
+      circleRef.current.setLatLng(pos);
+      circleRef.current.setRadius(lastLocation.accuracy);
+    } else {
+      circleRef.current = L.circle(pos, {
+        radius: lastLocation.accuracy,
+        color: '#3b82f6',
+        fillOpacity: 0.15,
+        weight: 1,
+      }).addTo(map);
+    }
+
+    return () => {};
+  }, [lastLocation]);
+
+  useEffect(() => {
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        markerRef.current = null;
+        circleRef.current = null;
+      }
+    };
+  }, []);
+
   return (
     <Card className="lg:col-span-3">
       <CardHeader>
@@ -47,30 +100,10 @@ export const LiveLocationMap: React.FC<LiveLocationMapProps> = ({ lastLocation }
       </CardHeader>
       <CardContent>
         {lastLocation ? (
-          <div className="h-[350px] w-full rounded-lg overflow-hidden border">
-            <MapContainer
-              center={[lastLocation.latitude, lastLocation.longitude]}
-              zoom={16}
-              style={{ height: '100%', width: '100%' }}
-              scrollWheelZoom={true}
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              <MapUpdater lat={lastLocation.latitude} lng={lastLocation.longitude} />
-              <Marker position={[lastLocation.latitude, lastLocation.longitude]}>
-                <Popup>
-                  Last updated: {formatDistanceToNow(new Date(lastLocation.timestamp), { addSuffix: true })}
-                </Popup>
-              </Marker>
-              <Circle
-                center={[lastLocation.latitude, lastLocation.longitude]}
-                radius={lastLocation.accuracy}
-                pathOptions={{ color: 'hsl(var(--primary))', fillOpacity: 0.15, weight: 1 }}
-              />
-            </MapContainer>
-          </div>
+          <div
+            ref={mapRef}
+            className="h-[350px] w-full rounded-lg overflow-hidden border"
+          />
         ) : (
           <div className="flex h-[350px] items-center justify-center rounded-lg border text-muted-foreground">
             Waiting for device location...
