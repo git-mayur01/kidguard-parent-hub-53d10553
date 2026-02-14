@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Lock, Unlock, Smartphone, Loader2, MapPin, AppWindow, Shield, MapPinned } from 'lucide-react';
-import { collection, doc, onSnapshot } from 'firebase/firestore';
+import { ArrowLeft, Lock, Unlock, Smartphone, Loader2, MapPin, AppWindow, Plus } from 'lucide-react';
+import { collection, doc, onSnapshot, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,11 +11,12 @@ import { Separator } from '@/components/ui/separator';
 import { Header } from '@/components/Header';
 import { AppListItem } from '@/components/AppListItem';
 import { LiveLocationMap } from '@/components/LiveLocationMap';
+import { AddGeofenceModal } from '@/components/AddGeofenceModal';
 import { DeviceDetailSidebar, DeviceSection } from '@/components/DeviceDetailSidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { deviceService } from '@/services/deviceService';
 import { policyService } from '@/services/policyService';
-import { Device, InstalledApp } from '@/types';
+import { Device, InstalledApp, Geofence } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -24,12 +25,15 @@ export const DeviceDetail: React.FC = () => {
   const [device, setDevice] = useState<Device | null>(null);
   const [apps, setApps] = useState<any[]>([]);
   const [lastLocation, setLastLocation] = useState<{ latitude: number; longitude: number; accuracy: number; timestamp: number } | null>(null);
+  const [geofences, setGeofences] = useState<Geofence[]>([]);
   const [loading, setLoading] = useState(true);
   const [lockUpdating, setLockUpdating] = useState(false);
   const [activeSection, setActiveSection] = useState<DeviceSection>('overview');
+  const [geofenceModalOpen, setGeofenceModalOpen] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // Device + location listener
   useEffect(() => {
     if (!deviceId || !user) return;
 
@@ -49,6 +53,7 @@ export const DeviceDetail: React.FC = () => {
     return () => { unsubDevice(); unsubLocation(); };
   }, [deviceId, user]);
 
+  // Installed apps listener
   useEffect(() => {
     if (!deviceId || !user) return;
 
@@ -62,6 +67,22 @@ export const DeviceDetail: React.FC = () => {
     });
 
     return () => unsubApps();
+  }, [deviceId, user]);
+
+  // Geofences listener
+  useEffect(() => {
+    if (!deviceId || !user) return;
+
+    const geofencesRef = collection(db, "parents", user.uid, "devices", deviceId, "geofences");
+    const unsubGeo = onSnapshot(geofencesRef, (snapshot) => {
+      const fences = snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      })) as Geofence[];
+      setGeofences(fences);
+    });
+
+    return () => unsubGeo();
   }, [deviceId, user]);
 
   const filteredApps = apps.filter((app) => {
@@ -88,6 +109,34 @@ export const DeviceDetail: React.FC = () => {
       setLockUpdating(false);
     }
   };
+
+  const handleSaveGeofence = async (name: string, latitude: number, longitude: number, radius: number) => {
+    if (!deviceId || !user) return;
+    const geofencesRef = collection(db, "parents", user.uid, "devices", deviceId, "geofences");
+    await addDoc(geofencesRef, { name, latitude, longitude, radius });
+    toast.success(`Geo-fence "${name}" created`);
+  };
+
+  // Compute geofence status
+  const geofenceStatus = useMemo(() => {
+    if (!lastLocation || geofences.length === 0) return null;
+
+    const insideFences: string[] = [];
+    geofences.forEach((fence) => {
+      const dist = getDistanceMeters(
+        lastLocation.latitude, lastLocation.longitude,
+        fence.latitude, fence.longitude
+      );
+      if (dist <= fence.radius) {
+        insideFences.push(fence.name);
+      }
+    });
+
+    if (insideFences.length > 0) {
+      return `Inside ${insideFences.join(', ')}`;
+    }
+    return 'Outside all fences';
+  }, [lastLocation, geofences]);
 
   if (loading) {
     return (
@@ -215,22 +264,60 @@ export const DeviceDetail: React.FC = () => {
               </Card>
             )}
 
-            {/* Live Location Section */}
+            {/* Live Location + Geo-Fences Section */}
             {activeSection === 'location' && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    <div>
-                      <CardTitle>Live Location</CardTitle>
-                      <CardDescription>Real-time device location tracking</CardDescription>
+              <div className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-5 w-5 text-primary" />
+                        <div>
+                          <CardTitle>Live Location</CardTitle>
+                          <CardDescription>Real-time device location & geo-fences</CardDescription>
+                        </div>
+                      </div>
+                      <Button size="sm" onClick={() => setGeofenceModalOpen(true)}>
+                        <Plus className="mr-1 h-4 w-4" />
+                        Add Geo-Fence
+                      </Button>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <LiveLocationMap lastLocation={lastLocation} />
-                </CardContent>
-              </Card>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <LiveLocationMap lastLocation={lastLocation} geofences={geofences} />
+
+                    {/* Geofence status */}
+                    {geofenceStatus && (
+                      <div className="flex items-center gap-2 rounded-lg border px-4 py-3">
+                        <Badge variant={geofenceStatus.startsWith('Inside') ? 'default' : 'secondary'}>
+                          {geofenceStatus}
+                        </Badge>
+                      </div>
+                    )}
+
+                    {/* Geofence list */}
+                    {geofences.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground">Active Fences</p>
+                        <div className="flex flex-wrap gap-2">
+                          {geofences.map((f) => (
+                            <Badge key={f.id} variant="outline">
+                              {f.name} ({f.radius}m)
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <AddGeofenceModal
+                  open={geofenceModalOpen}
+                  onClose={() => setGeofenceModalOpen(false)}
+                  onSave={handleSaveGeofence}
+                  initialCenter={lastLocation ? { latitude: lastLocation.latitude, longitude: lastLocation.longitude } : null}
+                />
+              </div>
             )}
 
             {/* Installed Apps Section */}
@@ -267,80 +354,22 @@ export const DeviceDetail: React.FC = () => {
                 </CardContent>
               </Card>
             )}
-
-            {/* Device Lock Section */}
-            {activeSection === 'lock' && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-primary" />
-                    <div>
-                      <CardTitle>Device Lock</CardTitle>
-                      <CardDescription>Control device access remotely</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div className="flex items-center gap-3">
-                      {isLocked ? (
-                        <Lock className="h-6 w-6 text-destructive" />
-                      ) : (
-                        <Unlock className="h-6 w-6 text-muted-foreground" />
-                      )}
-                      <div>
-                        <p className="font-medium">
-                          {isLocked ? 'Device is Locked' : 'Device is Unlocked'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {isLocked
-                            ? 'Your child cannot use the device until you unlock it.'
-                            : 'The device can be used normally.'}
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={isLocked}
-                      onCheckedChange={handleLockToggle}
-                      disabled={lockUpdating}
-                    />
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    When locked, the device will display a lock screen preventing any usage.
-                    The lock status updates in real-time on the child's device.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Geo-Fences Section (Placeholder) */}
-            {activeSection === 'geofences' && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <MapPinned className="h-5 w-5 text-primary" />
-                    <div>
-                      <CardTitle>Geo-Fencing</CardTitle>
-                      <CardDescription>Location-based alerts and boundaries</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <MapPinned className="h-12 w-12 text-muted-foreground/40 mb-4" />
-                    <p className="text-muted-foreground">
-                      Create safe zones and receive alerts when your child enters or exits specific areas.
-                    </p>
-                    <Badge variant="secondary" className="mt-4">Coming Soon</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
         </div>
       </main>
     </div>
   );
 };
+
+// Haversine distance in meters
+function getDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 export default DeviceDetail;

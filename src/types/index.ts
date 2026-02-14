@@ -29,3 +29,11 @@ export interface Parent {
   id: string;
   email: string;
 }
+
+export interface Geofence {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  radius: number;
+}

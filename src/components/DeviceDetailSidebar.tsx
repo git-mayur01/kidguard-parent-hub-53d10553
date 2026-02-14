@@ -1,8 +1,8 @@
 import React from 'react';
-import { LayoutDashboard, MapPin, AppWindow, Lock, MapPinned } from 'lucide-react';
+import { LayoutDashboard, MapPin, AppWindow } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type DeviceSection = 'overview' | 'location' | 'apps' | 'lock' | 'geofences';
+export type DeviceSection = 'overview' | 'location' | 'apps';
 
 interface DeviceDetailSidebarProps {
   activeSection: DeviceSection;
@@ -13,8 +13,6 @@ const sections: { id: DeviceSection; label: string; icon: React.ElementType }[] 
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'location', label: 'Live Location', icon: MapPin },
   { id: 'apps', label: 'Installed Apps', icon: AppWindow },
-  { id: 'lock', label: 'Device Lock', icon: Lock },
-  { id: 'geofences', label: 'Geo-Fences', icon: MapPinned },
 ];
 
 export const DeviceDetailSidebar: React.FC<DeviceDetailSidebarProps> = ({
