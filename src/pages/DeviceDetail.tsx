@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Lock, Unlock, Smartphone, Loader2, MapPin, MapPinned, AppWindow, Plus, Trash2 } from 'lucide-react';
-import { collection, doc, onSnapshot, addDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, onSnapshot, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -73,7 +73,7 @@ export const DeviceDetail: React.FC = () => {
   useEffect(() => {
     if (!deviceId || !user) return;
 
-    const geofencesRef = collection(db, "parents", user.uid, "devices", deviceId, "geofences");
+    const geofencesRef = collection(db, "parents", user.uid, "devices", deviceId, "geoFences");
     const unsubGeo = onSnapshot(geofencesRef, (snapshot) => {
       const fences = snapshot.docs.map(d => ({
         id: d.id,
@@ -112,14 +112,14 @@ export const DeviceDetail: React.FC = () => {
 
   const handleSaveGeofence = async (name: string, latitude: number, longitude: number, radius: number) => {
     if (!deviceId || !user) return;
-    const geofencesRef = collection(db, "parents", user.uid, "devices", deviceId, "geofences");
-    await addDoc(geofencesRef, { name, latitude, longitude, radius });
+    const geofencesRef = collection(db, "parents", user.uid, "devices", deviceId, "geoFences");
+    await addDoc(geofencesRef, { name, latitude, longitude, radius, createdAt: serverTimestamp(), isActive: true });
     toast.success(`Geo-fence "${name}" created`);
   };
 
   const handleDeleteGeofence = async (fenceId: string) => {
     if (!deviceId || !user) return;
-    const fenceDoc = doc(db, "parents", user.uid, "devices", deviceId, "geofences", fenceId);
+    const fenceDoc = doc(db, "parents", user.uid, "devices", deviceId, "geoFences", fenceId);
     await deleteDoc(fenceDoc);
     toast.success('Geo-fence deleted');
   };
