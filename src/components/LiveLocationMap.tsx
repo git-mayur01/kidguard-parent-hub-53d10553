@@ -2,8 +2,6 @@ import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { formatDistanceToNow } from 'date-fns';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { MapPin } from 'lucide-react';
 
 // Fix default marker icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -67,7 +65,7 @@ export const LiveLocationMap: React.FC<LiveLocationMapProps> = ({ lastLocation }
     } else {
       circleRef.current = L.circle(pos, {
         radius: lastLocation.accuracy,
-        color: '#3b82f6',
+        color: 'hsl(221, 83%, 53%)',
         fillOpacity: 0.15,
         weight: 1,
       }).addTo(map);
@@ -87,29 +85,18 @@ export const LiveLocationMap: React.FC<LiveLocationMapProps> = ({ lastLocation }
     };
   }, []);
 
+  if (!lastLocation) {
+    return (
+      <div className="flex h-[350px] items-center justify-center rounded-lg border text-muted-foreground">
+        Waiting for device location...
+      </div>
+    );
+  }
+
   return (
-    <Card className="lg:col-span-3">
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-primary" />
-          <div>
-            <CardTitle>Live Location</CardTitle>
-            <CardDescription>Real-time device location tracking</CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {lastLocation ? (
-          <div
-            ref={mapRef}
-            className="h-[350px] w-full rounded-lg overflow-hidden border"
-          />
-        ) : (
-          <div className="flex h-[350px] items-center justify-center rounded-lg border text-muted-foreground">
-            Waiting for device location...
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <div
+      ref={mapRef}
+      className="h-[350px] w-full rounded-lg overflow-hidden border"
+    />
   );
 };
