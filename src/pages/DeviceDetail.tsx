@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Lock, Unlock, Smartphone, Loader2 } from 'lucide-react';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Header } from '@/components/Header';
 import { AppListItem } from '@/components/AppListItem';
+import { LiveLocationMap } from '@/components/LiveLocationMap';
 import { useAuth } from '@/contexts/AuthContext';
 import { deviceService } from '@/services/deviceService';
 import { policyService } from '@/services/policyService';
@@ -22,6 +23,7 @@ export const DeviceDetail: React.FC = () => {
   const [device, setDevice] = useState<Device | null>(null);
   const [apps, setApps] = useState<any[]>([]);
   const [snapshotSize, setSnapshotSize] = useState<number | null>(null);
+  const [lastLocation, setLastLocation] = useState<{ latitude: number; longitude: number; accuracy: number; timestamp: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [lockUpdating, setLockUpdating] = useState(false);
   const { user } = useAuth();
@@ -34,6 +36,16 @@ export const DeviceDetail: React.FC = () => {
       setDevice(device);
       setLoading(false);
     });
+
+    const deviceDocRef = doc(db, "parents", user.uid, "devices", deviceId);
+    const unsubLocation = onSnapshot(deviceDocRef, (snapshot) => {
+      const data = snapshot.data();
+      if (data?.lastLocation) {
+        setLastLocation(data.lastLocation);
+      }
+    });
+
+    return () => { unsubDevice(); unsubLocation(); };
 
     return () => unsubDevice();
   }, [deviceId, user]);
@@ -210,6 +222,9 @@ export const DeviceDetail: React.FC = () => {
               </p>
             </CardContent>
           </Card>
+
+          {/* Live Location */}
+          <LiveLocationMap lastLocation={lastLocation} />
 
           {/* Installed Apps Card */}
           <Card className="lg:col-span-2">
