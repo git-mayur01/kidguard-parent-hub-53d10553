@@ -115,7 +115,7 @@ export const AddGeofenceModal: React.FC<AddGeofenceModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-[700px] z-[1000]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MapPinned className="h-5 w-5" />
@@ -129,7 +129,7 @@ export const AddGeofenceModal: React.FC<AddGeofenceModalProps> = ({
         <div className="space-y-4">
           <div
             ref={mapRef}
-            className="h-[250px] w-full rounded-lg overflow-hidden border"
+            className="h-[300px] w-full rounded-lg overflow-hidden border relative z-0"
           />
 
           {selectedPos && (

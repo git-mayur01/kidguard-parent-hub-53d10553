@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Lock, Unlock, Smartphone, Loader2, MapPin, AppWindow, Plus } from 'lucide-react';
-import { collection, doc, onSnapshot, addDoc } from 'firebase/firestore';
+import { ArrowLeft, Lock, Unlock, Smartphone, Loader2, MapPin, MapPinned, AppWindow, Plus, Trash2 } from 'lucide-react';
+import { collection, doc, onSnapshot, addDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -115,6 +115,13 @@ export const DeviceDetail: React.FC = () => {
     const geofencesRef = collection(db, "parents", user.uid, "devices", deviceId, "geofences");
     await addDoc(geofencesRef, { name, latitude, longitude, radius });
     toast.success(`Geo-fence "${name}" created`);
+  };
+
+  const handleDeleteGeofence = async (fenceId: string) => {
+    if (!deviceId || !user) return;
+    const fenceDoc = doc(db, "parents", user.uid, "devices", deviceId, "geofences", fenceId);
+    await deleteDoc(fenceDoc);
+    toast.success('Geo-fence deleted');
   };
 
   // Compute geofence status
@@ -269,12 +276,34 @@ export const DeviceDetail: React.FC = () => {
               <div className="space-y-4">
                 <Card>
                   <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-primary" />
+                      <div>
+                        <CardTitle>Live Location</CardTitle>
+                        <CardDescription>Real-time device location</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <LiveLocationMap lastLocation={lastLocation} geofences={geofences} />
+                    {geofenceStatus && (
+                      <div className="flex items-center gap-2 rounded-lg border px-4 py-3 mt-4">
+                        <Badge variant={geofenceStatus.startsWith('Inside') ? 'default' : 'secondary'}>
+                          {geofenceStatus}
+                        </Badge>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <MapPin className="h-5 w-5 text-primary" />
+                        <MapPinned className="h-5 w-5 text-primary" />
                         <div>
-                          <CardTitle>Live Location</CardTitle>
-                          <CardDescription>Real-time device location & geo-fences</CardDescription>
+                          <CardTitle>Geo-Fences</CardTitle>
+                          <CardDescription>Safe zones and boundary alerts</CardDescription>
                         </div>
                       </div>
                       <Button size="sm" onClick={() => setGeofenceModalOpen(true)}>
@@ -283,29 +312,32 @@ export const DeviceDetail: React.FC = () => {
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <LiveLocationMap lastLocation={lastLocation} geofences={geofences} />
-
-                    {/* Geofence status */}
-                    {geofenceStatus && (
-                      <div className="flex items-center gap-2 rounded-lg border px-4 py-3">
-                        <Badge variant={geofenceStatus.startsWith('Inside') ? 'default' : 'secondary'}>
-                          {geofenceStatus}
-                        </Badge>
+                  <CardContent>
+                    {geofences.length === 0 ? (
+                      <div className="py-6 text-center text-sm text-muted-foreground">
+                        No geo-fences configured yet. Add one to start monitoring.
                       </div>
-                    )}
-
-                    {/* Geofence list */}
-                    {geofences.length > 0 && (
+                    ) : (
                       <div className="space-y-2">
-                        <p className="text-sm font-medium text-muted-foreground">Active Fences</p>
-                        <div className="flex flex-wrap gap-2">
-                          {geofences.map((f) => (
-                            <Badge key={f.id} variant="outline">
-                              {f.name} ({f.radius}m)
-                            </Badge>
-                          ))}
-                        </div>
+                        {geofences.map((f) => (
+                          <div
+                            key={f.id}
+                            className="flex items-center justify-between rounded-lg border px-4 py-3"
+                          >
+                            <div>
+                              <p className="text-sm font-medium">{f.name}</p>
+                              <p className="text-xs text-muted-foreground">Radius: {f.radius}m</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => handleDeleteGeofence(f.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </CardContent>

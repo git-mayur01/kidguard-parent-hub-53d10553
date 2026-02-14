@@ -114,7 +114,7 @@ export const LiveLocationMap: React.FC<LiveLocationMapProps> = ({ lastLocation, 
 
   if (!lastLocation) {
     return (
-      <div className="flex h-[350px] items-center justify-center rounded-lg border text-muted-foreground">
+      <div className="flex h-[400px] items-center justify-center rounded-lg border text-muted-foreground">
         Waiting for device location...
       </div>
     );
@@ -123,7 +123,7 @@ export const LiveLocationMap: React.FC<LiveLocationMapProps> = ({ lastLocation, 
   return (
     <div
       ref={mapRef}
-      className="h-[350px] w-full rounded-lg overflow-hidden border"
+      className="h-[400px] w-full rounded-lg overflow-hidden border relative z-0"
     />
   );
 };
