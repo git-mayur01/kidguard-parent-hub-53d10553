@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { formatDistanceToNow } from 'date-fns';
+import { Geofence } from '@/types';
 
 // Fix default marker icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -20,13 +21,15 @@ interface LastLocation {
 
 interface LiveLocationMapProps {
   lastLocation: LastLocation | null;
+  geofences: Geofence[];
 }
 
-export const LiveLocationMap: React.FC<LiveLocationMapProps> = ({ lastLocation }) => {
+export const LiveLocationMap: React.FC<LiveLocationMapProps> = ({ lastLocation, geofences }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const circleRef = useRef<L.Circle | null>(null);
+  const geofenceLayersRef = useRef<L.Circle[]>([]);
 
   useEffect(() => {
     if (!mapRef.current || !lastLocation) return;
@@ -74,6 +77,29 @@ export const LiveLocationMap: React.FC<LiveLocationMapProps> = ({ lastLocation }
     return () => {};
   }, [lastLocation]);
 
+  // Render geofence circles
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    // Remove old geofence layers
+    geofenceLayersRef.current.forEach((layer) => layer.remove());
+    geofenceLayersRef.current = [];
+
+    geofences.forEach((fence) => {
+      const circle = L.circle([fence.latitude, fence.longitude], {
+        radius: fence.radius,
+        color: 'hsl(142, 71%, 45%)',
+        fillOpacity: 0.1,
+        weight: 2,
+        dashArray: '6 4',
+      })
+        .addTo(map)
+        .bindPopup(fence.name);
+      geofenceLayersRef.current.push(circle);
+    });
+  }, [geofences]);
+
   useEffect(() => {
     return () => {
       if (mapInstanceRef.current) {
@@ -81,6 +107,7 @@ export const LiveLocationMap: React.FC<LiveLocationMapProps> = ({ lastLocation }
         mapInstanceRef.current = null;
         markerRef.current = null;
         circleRef.current = null;
+        geofenceLayersRef.current = [];
       }
     };
   }, []);
